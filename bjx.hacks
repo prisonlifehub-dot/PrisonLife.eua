@@ -1,0 +1,206 @@
+--// SERVICES
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local UIS = game:GetService("UserInputService")
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+--// CHARACTER FUNCTION
+local function getChar()
+	local char = player.Character or player.CharacterAdded:Wait()
+	return char, char:WaitForChild("HumanoidRootPart")
+end
+
+--// TELEPORT + BOUNCE
+local busy = false
+local function teleportAndBounce(targetPos)
+	if busy then return end
+	busy = true
+
+	local _, hrp = getChar()
+	local original = hrp.CFrame
+
+	hrp.CFrame = CFrame.new(targetPos)
+
+	task.spawn(function()
+		local upTween = TweenService:Create(
+			hrp,
+			TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+			{CFrame = CFrame.new(targetPos + Vector3.new(0,5,0))}
+		)
+		upTween:Play()
+		upTween.Completed:Wait()
+
+		local downTween = TweenService:Create(
+			hrp,
+			TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+			{CFrame = CFrame.new(targetPos)}
+		)
+		downTween:Play()
+	end)
+
+	task.delay(0.7, function()
+		local _, newHrp = getChar()
+		if newHrp then newHrp.CFrame = original end
+		busy = false
+	end)
+end
+
+--------------------------------------------------------------------
+--// GUN TELEPORT GUI
+--------------------------------------------------------------------
+local gunGui = Instance.new("ScreenGui")
+gunGui.ResetOnSpawn = false
+gunGui.Parent = playerGui
+gunGui.Name = "GunTeleportGUI"
+
+-- MAIN FRAME
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 240, 0, 300)
+frame.Position = UDim2.new(0.5, -120, 0.5, -150)
+frame.BackgroundColor3 = Color3.fromRGB(30,30,30)
+frame.Parent = gunGui
+Instance.new("UICorner", frame)
+
+-- TITLE BAR
+local title = Instance.new("Frame")
+title.Size = UDim2.new(1,0,0,40)
+title.BackgroundColor3 = Color3.fromRGB(50,50,50)
+title.Parent = frame
+Instance.new("UICorner", title)
+
+local titleText = Instance.new("TextLabel")
+titleText.Size = UDim2.new(1,0,1,0)
+titleText.BackgroundTransparency = 1
+titleText.Text = "Gun Teleports"
+titleText.TextColor3 = Color3.fromRGB(255,255,255)
+titleText.TextSize = 20
+titleText.Font = Enum.Font.GothamBold
+titleText.Parent = title
+
+-- CLOSE BUTTON
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.new(0,35,0,35)
+closeBtn.Position = UDim2.new(1,-40,0,3)
+closeBtn.BackgroundColor3 = Color3.fromRGB(180,40,40)
+closeBtn.Text = "X"
+closeBtn.TextColor3 = Color3.fromRGB(255,255,255)
+closeBtn.TextSize = 20
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.Parent = title
+Instance.new("UICorner", closeBtn)
+
+-- MINI BUTTON
+local miniBtn = Instance.new("TextButton")
+miniBtn.Size = UDim2.new(0,80,0,35)
+miniBtn.Position = UDim2.new(1,-90,0,10)
+miniBtn.BackgroundColor3 = Color3.fromRGB(50,50,50)
+miniBtn.Text = "Guns"
+miniBtn.TextColor3 = Color3.fromRGB(255,255,255)
+miniBtn.TextSize = 18
+miniBtn.Font = Enum.Font.GothamBold
+miniBtn.Visible = false
+miniBtn.Parent = gunGui
+Instance.new("UICorner", miniBtn)
+
+-- DRAGGING
+local dragging = false
+local dragStart, startPos
+title.InputBegan:Connect(function(i)
+	if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+		dragging = true
+		dragStart = i.Position
+		startPos = frame.Position
+	end
+end)
+title.InputEnded:Connect(function(i)
+	if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+		dragging = false
+	end
+end)
+UIS.InputChanged:Connect(function(i)
+	if dragging and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
+		local delta = i.Position - dragStart
+		frame.Position = UDim2.new(
+			startPos.X.Scale, startPos.X.Offset + delta.X,
+			startPos.Y.Scale, startPos.Y.Offset + delta.Y
+		)
+	end
+end)
+
+-- CREATE BUTTON FUNCTION
+local function createButton(text, order)
+	local btn = Instance.new("TextButton")
+	btn.Size = UDim2.new(1,-20,0,45)
+	btn.Position = UDim2.new(0,10,0,45 + ((order-1)*55))
+	btn.BackgroundColor3 = Color3.fromRGB(70,70,70)
+	btn.TextColor3 = Color3.fromRGB(255,255,255)
+	btn.TextSize = 20
+	btn.Font = Enum.Font.GothamMedium
+	btn.Text = text
+	btn.Parent = frame
+	Instance.new("UICorner", btn)
+	return btn
+end
+
+-- BUTTONS
+local b1 = createButton("M4A1",1)
+local b2 = createButton("AK47",2)
+local b3 = createButton("SHOTGUN",3)
+local b4 = createButton("M9",4)
+
+-- POSITIONS
+local POS_M4A1    = Vector3.new(847.37, 98, 2217.31)
+local POS_AK47    = Vector3.new(-931.80, 91.43, 2039.05)
+local POS_SHOTGUN = Vector3.new(820.28, 98, 2217.44)
+local POS_M9      = Vector3.new(813.59, 98, 2217.31)
+
+-- BUTTON CONNECTIONS
+b1.MouseButton1Click:Connect(function() teleportAndBounce(POS_M4A1) end)
+b2.MouseButton1Click:Connect(function() teleportAndBounce(POS_AK47) end)
+b3.MouseButton1Click:Connect(function() teleportAndBounce(POS_SHOTGUN) end)
+b4.MouseButton1Click:Connect(function() teleportAndBounce(POS_M9) end)
+
+-- CLOSE / OPEN
+closeBtn.MouseButton1Click:Connect(function()
+	frame.Visible = false
+	miniBtn.Visible = true
+end)
+miniBtn.MouseButton1Click:Connect(function()
+	frame.Visible = true
+	miniBtn.Visible = false
+end)
+
+--------------------------------------------------------------------
+--// FORCE RESET GUI
+--------------------------------------------------------------------
+local resetGui = Instance.new("ScreenGui")
+resetGui.ResetOnSpawn = false
+resetGui.Parent = playerGui
+resetGui.Name = "ResetGUI"
+
+local resetFrame = Instance.new("Frame")
+resetFrame.Size = UDim2.new(0,50,0,50)
+resetFrame.Position = UDim2.new(0,10,0,10)
+resetFrame.BackgroundColor3 = Color3.fromRGB(35,35,35)
+resetFrame.BorderSizePixel = 2
+resetFrame.Parent = resetGui
+
+local resetBtn = Instance.new("TextButton")
+resetBtn.Size = UDim2.new(1,-10,1,-10)
+resetBtn.Position = UDim2.new(0,5,0,5)
+resetBtn.BackgroundColor3 = Color3.fromRGB(200,0,0)
+resetBtn.Text = "R"
+resetBtn.TextScaled = true
+resetBtn.Font = Enum.Font.GothamBold
+resetBtn.TextColor3 = Color3.fromRGB(255,255,255)
+resetBtn.Parent = resetFrame
+
+-- RESET FUNCTION
+resetBtn.MouseButton1Click:Connect(function()
+	local char = player.Character
+	if char then
+		char:BreakJoints()
+	end
+end)
